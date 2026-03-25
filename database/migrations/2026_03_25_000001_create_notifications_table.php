@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreignId('task_id')->constrained()->cascadeOnUpdate()->nullOnDelete();
+            $table->foreignId('task_id')->nullable()->constrained()->cascadeOnUpdate()->nullOnDelete();
             $table->enum('type', ['overdue']);
             $table->string('message', 500);
             $table->json('data')->nullable();

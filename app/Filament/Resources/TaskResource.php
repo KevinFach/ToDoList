@@ -6,19 +6,18 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Filament\Resources\TaskResource\Pages;
 use App\Models\Task;
-use Filament\Resources\Form;
+use Filament\Forms;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
 use Filament\Tables;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
 class TaskResource extends Resource
 {
     protected static ?string $model = Task::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-list';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     public static function form(Form $form): Form
     {
@@ -42,24 +41,44 @@ class TaskResource extends Resource
             ->columns([
                 TextColumn::make('id')->sortable(),
                 TextColumn::make('title')->searchable()->sortable(),
-                BadgeColumn::make('priority')->colors(['danger' => 'High', 'warning' => 'Medium', 'success' => 'Low']),
-                BadgeColumn::make('status')->colors(['warning' => 'pending', 'primary' => 'in_progress', 'success' => 'completed']),
+                TextColumn::make('priority')
+                    ->badge()
+                    ->color(fn (TaskPriority $state): string => match ($state) {
+                        TaskPriority::High => 'danger',
+                        TaskPriority::Medium => 'warning',
+                        TaskPriority::Low => 'success',
+                    })
+                    ->sortable(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (TaskStatus $state): string => match ($state) {
+                        TaskStatus::Pending => 'warning',
+                        TaskStatus::InProgress => 'info',
+                        TaskStatus::Completed => 'success',
+                    })
+                    ->sortable(),
                 TextColumn::make('due_date')->date()->sortable(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])
             ->filters([
-                SelectFilter::make('priority')->options(array_combine(TaskPriority::values(), TaskPriority::values())),
-                SelectFilter::make('status')->options(array_combine(TaskStatus::values(), TaskStatus::values())),
+                Tables\Filters\SelectFilter::make('priority')->options(TaskPriority::class),
+                Tables\Filters\SelectFilter::make('status')->options(TaskStatus::class),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->defaultSort('due_date', 'asc')
             ->actions([
-                Tables\Actions\EditAction::make()->visible(fn (Task $record): bool => $record->status !== TaskStatus::Completed),
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('user_id', auth()->id());
     }
 
     public static function getPages(): array
